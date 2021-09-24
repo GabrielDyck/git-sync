@@ -50,7 +50,7 @@ var flVer = flag.Bool("version", false, "print the version and exit")
 
 var flRepo = flag.String("repo", envString("GIT_SYNC_REPO", ""),
 	"the git repository to clone")
-var flBranch = flag.String("branch", envString("GIT_SYNC_BRANCH", "master"),
+var flBranch = flag.String("branch", envString("GIT_SYNC_BRANCH", ""),
 	"the git branch to check out")
 var flRev = flag.String("rev", envString("GIT_SYNC_REV", "HEAD"),
 	"the git revision (tag or hash) to check out")
@@ -669,7 +669,9 @@ func addWorktreeAndSwap(ctx context.Context, gitRoot, dest, branch, rev string, 
 	if depth != 0 {
 		args = append(args, "--depth", strconv.Itoa(depth))
 	}
-	args = append(args, "origin", branch)
+	if branch !=""{
+		args = append(args, "origin", branch)
+	}
 
 	// Update from the remote.
 	if _, err := cmdRunner.Run(ctx, gitRoot, *flGitCmd, args...); err != nil {
@@ -702,7 +704,11 @@ func addWorktreeAndSwap(ctx context.Context, gitRoot, dest, branch, rev string, 
 		return err
 	}
 
-	_, err := cmdRunner.Run(ctx, gitRoot, *flGitCmd, "worktree", "add", worktreePath, "origin/"+branch, "--no-checkout")
+	worktreeArgs:= []string{ "worktree", "add", worktreePath, "--no-checkout"}
+	if branch!=""{
+		worktreeArgs= append(worktreeArgs,"origin/"+branch)
+	}
+	_, err := cmdRunner.Run(ctx, gitRoot, *flGitCmd, worktreeArgs...)
 	log.V(0).Info("adding worktree", "path", worktreePath, "branch", fmt.Sprintf("origin/%s", branch))
 	if err != nil {
 		return err
@@ -815,7 +821,11 @@ func addWorktreeAndSwap(ctx context.Context, gitRoot, dest, branch, rev string, 
 }
 
 func cloneRepo(ctx context.Context, repo, branch, rev string, depth int, gitRoot string) error {
-	args := []string{"clone", "--no-checkout", "-b", branch}
+	args := []string{"clone", "--no-checkout"}
+
+	if branch !=""{
+		args= append(args, "-b", branch)
+	}
 	if depth != 0 {
 		args = append(args, "--depth", strconv.Itoa(depth))
 	}
