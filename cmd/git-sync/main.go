@@ -55,7 +55,7 @@ var flVerbose = pflag.IntP("verbose", "v", 0,
 
 var flRepo = pflag.String("repo", envString("GIT_SYNC_REPO", ""),
 	"the git repository to clone")
-var flBranch = pflag.String("branch", envString("GIT_SYNC_BRANCH", "master"),
+var flBranch = pflag.String("branch", envString("GIT_SYNC_BRANCH", ""),
 	"the git branch to check out")
 var flRev = pflag.String("rev", envString("GIT_SYNC_REV", "HEAD"),
 	"the git revision (tag or hash) to check out")
@@ -881,7 +881,10 @@ func (git *repoSync) AddWorktreeAndSwap(ctx context.Context, hash string) error 
 	if git.depth != 0 {
 		args = append(args, "--depth", strconv.Itoa(git.depth))
 	}
-	args = append(args, "origin", git.branch)
+
+	if git.branch != "" {
+		args = append(args, "origin", git.branch)
+	}
 
 	// Update from the remote.
 	if _, err := git.run.Run(ctx, git.root, git.cmd, args...); err != nil {
@@ -912,7 +915,12 @@ func (git *repoSync) AddWorktreeAndSwap(ctx context.Context, hash string) error 
 		return err
 	}
 
-	_, err := git.run.Run(ctx, git.root, git.cmd, "worktree", "add", worktreePath, "origin/"+git.branch, "--no-checkout")
+	workTreeArgs := []string{"worktree", "add", worktreePath, "--no-checkout"}
+
+	if git.branch != ""{
+		args=append(workTreeArgs,"origin/"+git.branch)
+	}
+	_, err := git.run.Run(ctx, git.root, git.cmd, workTreeArgs...)
 	git.log.V(0).Info("adding worktree", "path", worktreePath, "branch", fmt.Sprintf("origin/%s", git.branch))
 	if err != nil {
 		return err
@@ -1037,7 +1045,11 @@ func (git *repoSync) AddWorktreeAndSwap(ctx context.Context, hash string) error 
 
 // CloneRepo does an initial clone of the git repo.
 func (git *repoSync) CloneRepo(ctx context.Context) error {
-	args := []string{"clone", "--no-checkout", "-b", git.branch}
+	args := []string{"clone", "--no-checkout"}
+
+	if git.branch != ""{
+		args = append(args,"-b", git.branch)
+	}
 	if git.depth != 0 {
 		args = append(args, "--depth", strconv.Itoa(git.depth))
 	}
